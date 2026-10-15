@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: If you cite this guest, cite the SolidCraft engine and libriscv.
+title: interactor-solidcraft-guest
+abstract: >-
+  A godot-sandbox (libriscv) Rust guest that drives the SolidCraft engine.
+  It registers the engine's control-channel API as host-callable guest
+  functions, builds solids, and halts so the host can call the API.
+type: software
+authors:
+  - name: V-Sekai-fire
+license: Apache-2.0
+references:
+  - type: software
+    title: SolidCraft
+    url: https://github.com/bherbruck/solidcraft
+    license: MIT or Apache-2.0
+  - type: software
+    title: libriscv
+    url: https://github.com/libriscv/libriscv
+    license: BSD-3-Clause
+  - type: software
+    title: Rust
+    url: https://www.rust-lang.org
+    license: Apache-2.0

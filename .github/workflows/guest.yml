@@ -1,0 +1,89 @@
+name: guest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  commits:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Commit subjects are sentence-case prose, and the checker's controls
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/V-Sekai-fire/manuals-weftspun/main/scripts/check_commit_style.py -o "$RUNNER_TEMP/check_commit_style.py"
+          python3 "$RUNNER_TEMP/check_commit_style.py" --self-test
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python3 "$RUNNER_TEMP/check_commit_style.py" --base "origin/${{ github.base_ref }}"
+          fi
+
+  build:
+    needs: commits
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: weft/3-interactor/solidcraft-guest
+      - name: Tools from apt
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q g++-16-riscv64-linux-gnu rustc gcc-16-riscv64-linux-gnu cargo git clang lld
+      - name: The goal manifest's engine sibling + riscv64 sysroot
+        working-directory: weft
+        run: |
+          git clone -q --depth 1 https://github.com/bherbruck/solidcraft.git 3-interactor/solidcraft
+          git clone -q --depth 1 https://github.com/V-Sekai-fire/repository-riscv64-sysroot.git 5-repository/riscv64-sysroot
+      - name: Build the guest ELF from a clean runner
+        working-directory: weft/3-interactor/solidcraft-guest
+        env:
+          RUSTC_SYSROOT: ""
+        run: |
+          export PATH="/root/.cargo/bin:${PATH}"
+          rustup default stable
+          rustup target add riscv64gc-unknown-linux-gnu
+          echo "LD=$(command -v ld.lld)" >> "$GITHUB_ENV"
+          cargo build --release --target-dir "$RUNNER_TEMP/build"
+          cp "$RUNNER_TEMP/build/riscv64gc-unknown-linux-gnu/release/solidcraft-guest" ./guest.elf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solidcraft-guest-elf-${{ github.sha }}
+          path: guest.elf
+
+  bintr:
+    needs: [build, commits]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: weft/3-interactor/solidcraft-guest
+      - name: Tools from apt
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q clang lld qemu-user
+      - name: The goal manifest's riscv64 sysroot
+        working-directory: weft
+        run: git clone -q --depth 1 https://github.com/V-Sekai-fire/repository-riscv64-sysroot.git 5-repository/riscv64-sysroot
+      - uses: actions/download-artifact@v4
+        with:
+          name: solidcraft-guest-elf-${{ github.sha }}
+          path: ${{ runner.temp }}/elf
+      - name: native translation and interpretation with the engine sibling
+        working-directory: weft/3-interactor/solidcraft-guest
+        run: |
+          echo "host=linux"
+          # Placeholder control: run the ELF's self-test once a native qemu
+          # invocation is wired up. Kept minimal so the WIP builds; the
+          # bintr control (native vs interpreted round-trip) is added in a
+          # follow-up commit once the guest's self-test entry exists.
+          echo "bintr: ELF staged for control (follow-up)"

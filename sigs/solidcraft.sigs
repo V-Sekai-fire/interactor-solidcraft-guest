@@ -1,0 +1,11 @@
+# interactor-solidcraft-guest host-callable surface (form-A .sigs).
+#
+# One host-callable guest function per line, `<Namespace>.<method>(<args>)
+# -> <return>`, matching the engine's public API as registered in main.rs
+# (register_public_api_func0 / register_public_api_func3).
+#
+# Namespace is the guest object the host sees (`SolidCraft`).
+
+SolidCraft.solid_default()                      -> Array    # 10x20x30 mm box, canonical example
+SolidCraft.solid_box(float length, float width, float height) -> Array    # parameterised box, mm
+SolidCraft.solid_command_count()                -> int      # engine command-spec count
