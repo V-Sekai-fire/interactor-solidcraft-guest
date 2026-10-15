@@ -47,10 +47,14 @@ jobs:
         working-directory: weft/3-interactor/solidcraft-guest
         env:
           RUSTC_SYSROOT: ""
-          # cc-rs resolves the C compiler as TARGET_CC_<triple> (hyphens).
-          # The bare name riscv64-linux-gnu-gcc is a non-executable stub on
-          # ubuntu-26.04; point cc at the real apt toolchain.
+          # cc-rs picks up the C compiler from CC_<target> / TARGET_CC_<target>,
+          # hyphens or underscores. The bare name riscv64-linux-gnu-gcc is a
+          # non-executable stub on ubuntu-26.04; point every variant at the
+          # real apt toolchain.
+          CC_riscv64gc-unknown-linux-gnu: riscv64-linux-gnu-gcc-16
+          CC_riscv64gc_unknown_linux_gnu: riscv64-linux-gnu-gcc-16
           TARGET_CC_riscv64gc-unknown-linux-gnu: riscv64-linux-gnu-gcc-16
+          TARGET_CC_riscv64gc_unknown_linux_gnu: riscv64-linux-gnu-gcc-16
         run: |
           export PATH="/root/.cargo/bin:${PATH}"
           rustup default stable
