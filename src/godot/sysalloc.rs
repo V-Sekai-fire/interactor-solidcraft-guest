@@ -43,7 +43,7 @@ static A: SysAllocator = SysAllocator;
 
 /** Native-performance host-side implementations of common memory functions */
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8
 {
 	unsafe {
@@ -58,7 +58,7 @@ pub fn __wrap_memcpy(dest: *mut u8, src: *const u8, n: usize) -> *mut u8
 	return dest;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_memset(s: *mut u8, c: i32, n: usize) -> *mut u8
 {
 	unsafe {
@@ -73,7 +73,7 @@ pub fn __wrap_memset(s: *mut u8, c: i32, n: usize) -> *mut u8
 	return s;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_memmove(dest: *mut u8, src: *const u8, n: usize) -> *mut u8
 {
 	unsafe {
@@ -88,7 +88,7 @@ pub fn __wrap_memmove(dest: *mut u8, src: *const u8, n: usize) -> *mut u8
 	return dest;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32
 {
 	let result: i32;
@@ -105,7 +105,7 @@ pub fn __wrap_memcmp(s1: *const u8, s2: *const u8, n: usize) -> i32
 	return result;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_strlen(s: *const u8) -> usize
 {
 	let result: usize;
@@ -120,7 +120,7 @@ pub fn __wrap_strlen(s: *const u8) -> usize
 	return result;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_strcmp(s1: *const u8, s2: *const u8) -> i32
 {
 	let result: i32;
@@ -137,7 +137,7 @@ pub fn __wrap_strcmp(s1: *const u8, s2: *const u8) -> i32
 	return result;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn __wrap_strncmp(s1: *const u8, s2: *const u8, n: usize) -> i32
 {
 	let result: i32;
@@ -154,7 +154,7 @@ pub fn __wrap_strncmp(s1: *const u8, s2: *const u8, n: usize) -> i32
 	return result;
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub fn fast_exit() -> ! {
 	unsafe {
 		asm!("1: .insn i SYSTEM, 0, x0, x0, 0x7ff",
