@@ -41,7 +41,14 @@ jobs:
       - name: The goal manifest's engine sibling + riscv64 sysroot
         working-directory: weft
         run: |
-          git clone -q --depth 1 https://github.com/bherbruck/solidcraft.git 3-interactor/solidcraft
+          # Pin the engine to the manifest revision so CI checks the same rev
+          # the goal manifest gates (bare main drifts onto upstream moves and
+          # breaks mid-refactor). Fast shallow fetch of the exact SHA.
+          ENGINE_REV=5c2fa3e9ca94d09c47a48256209c2939d0fcd39b
+          git init -q 3-interactor/solidcraft
+          git -C 3-interactor/solidcraft remote add origin https://github.com/bherbruck/solidcraft.git
+          git -C 3-interactor/solidcraft fetch --depth 1 origin $ENGINE_REV
+          git -C 3-interactor/solidcraft checkout -q FETCH_HEAD
           git clone -q --depth 1 https://github.com/V-Sekai-fire/repository-riscv64-sysroot.git 5-repository/riscv64-sysroot
       - name: Build the guest ELF from a clean runner
         working-directory: weft/3-interactor/solidcraft-guest
