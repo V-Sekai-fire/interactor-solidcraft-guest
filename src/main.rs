@@ -129,6 +129,9 @@ fn solid_command_count() -> Variant {
 
 pub fn main() {
     println!("solidcraft-guest starting");
+    // The engine catches command panics and reports only their message; print
+    // where each one happened so a failing command names its source line.
+    std::panic::set_hook(Box::new(|info| println!("solidcraft-guest panic: {info}")));
     // Read the Variant-size note once so the linker keeps its section.
     let _ = unsafe { core::ptr::read_volatile(&godot::variant::SANDBOX_VARIANT_SIZE.size) };
     register_public_api_func0(
