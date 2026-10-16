@@ -6,3 +6,4 @@ pub mod dictionary;
 pub mod string;
 pub mod sysalloc;
 pub mod syscalls;
+pub mod clock;

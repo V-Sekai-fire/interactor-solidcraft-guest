@@ -93,27 +93,34 @@ fn solid_mesh(kind: i64, a: f64, b: f64, c: f64) -> Variant {
         out.push(Variant::new_bool(false));
         return GodotArray::create(&out).to_variant();
     }
-    let mesh = world.bodies[0].mesh();
-    let mut pos: Vec<Variant> = Vec::with_capacity(mesh.positions.len() * 3);
-    for p in &mesh.positions {
+    // A game-sized mesh: chord tolerance 1.5% of the body (the engine's display
+    // mesh uses 0.1%, ten times the triangles of a sphere for no visible gain).
+    let mb = &world.bodies[0];
+    let mesh = match mb.body.tessellate((mb.body.size() * 0.015).max(0.05)) {
+        Ok(m) => std::sync::Arc::new(m),
+        Err(_) => mb.mesh(),
+    };
+    let (positions, normals, triangles) = (&mesh.positions, &mesh.normals, &mesh.triangles);
+    let mut pos: Vec<Variant> = Vec::with_capacity(positions.len() * 3);
+    for p in positions {
         pos.push(Variant::new_float(p.x));
         pos.push(Variant::new_float(p.y));
         pos.push(Variant::new_float(p.z));
     }
-    let mut nrm: Vec<Variant> = Vec::with_capacity(mesh.normals.len() * 3);
-    for n in &mesh.normals {
+    let mut nrm: Vec<Variant> = Vec::with_capacity(normals.len() * 3);
+    for n in normals {
         nrm.push(Variant::new_float(n.x));
         nrm.push(Variant::new_float(n.y));
         nrm.push(Variant::new_float(n.z));
     }
-    let mut idx: Vec<Variant> = Vec::with_capacity(mesh.triangles.len() * 3);
-    for t in &mesh.triangles {
+    let mut idx: Vec<Variant> = Vec::with_capacity(triangles.len() * 3);
+    for t in triangles {
         for i in t {
             idx.push(Variant::new_integer(*i as i64));
         }
     }
     out.push(Variant::new_bool(true));
-    out.push(Variant::new_integer(mesh.triangles.len() as i64));
+    out.push(Variant::new_integer(triangles.len() as i64));
     out.push(GodotArray::create(&pos).to_variant());
     out.push(GodotArray::create(&nrm).to_variant());
     out.push(GodotArray::create(&idx).to_variant());
