@@ -23,9 +23,8 @@ impl GodotArray {
 			asm!("ecall",
 				in("a0") &mut var, // Result variant
 				in("a1") VariantType::Array as i32, // Variant type
-				in("a2") 1, // Array from pointer + length
+				in("a2") array.len(), // Element count; the host copies that many Variants
 				in("a3") array.as_ptr(),
-				in("a4") array.len(),
 				in("a7") ECALL_VREATE,
 			);
 		}

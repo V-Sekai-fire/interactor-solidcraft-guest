@@ -3,6 +3,36 @@ use core::arch::asm;
 use std::fmt;
 use super::string::*;
 
+/// Godot's real_t. godot-sandbox hosts built with double precision lay out
+/// vectors in f64, so a guest's Variant must match the host's or every value
+/// it passes or returns is misread. The `double` feature (on by default)
+/// matches the double-precision Godot builds this guest ships with.
+#[cfg(feature = "double")]
+pub type Real = f64;
+#[cfg(not(feature = "double"))]
+pub type Real = f32;
+
+/// The `.sandbox_variant` note godot-sandbox reads before it loads an ELF:
+/// "SBXV" then the guest's Variant size. Without it the host assumes the
+/// single-precision 24 bytes and a double host refuses the program.
+#[repr(C)]
+pub struct SandboxVariantSize {
+	pub magic: [u8; 4],
+	pub size: u32,
+}
+
+#[used]
+#[unsafe(link_section = ".sandbox_variant")]
+pub static SANDBOX_VARIANT_SIZE: SandboxVariantSize = SandboxVariantSize {
+	magic: *b"SBXV",
+	size: core::mem::size_of::<Variant>() as u32,
+};
+
+#[cfg(feature = "double")]
+const _: () = assert!(core::mem::size_of::<Variant>() == 40);
+#[cfg(not(feature = "double"))]
+const _: () = assert!(core::mem::size_of::<Variant>() == 24);
+
 #[repr(C)]
 pub enum VariantType {
 	Nil,
@@ -53,8 +83,8 @@ pub enum VariantType {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Vector2 {
-	pub x: f32,
-	pub y: f32,
+	pub x: Real,
+	pub y: Real,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -65,9 +95,9 @@ pub struct Vector2i {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Vector3 {
-	pub x: f32,
-	pub y: f32,
-	pub z: f32,
+	pub x: Real,
+	pub y: Real,
+	pub z: Real,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -91,10 +121,10 @@ pub struct Rect2i {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Vector4 {
-	pub x: f32,
-	pub y: f32,
-	pub z: f32,
-	pub w: f32,
+	pub x: Real,
+	pub y: Real,
+	pub z: Real,
+	pub w: Real,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -371,7 +401,7 @@ impl Variant
 
 impl Vector2
 {
-	pub fn new(x: f32, y: f32) -> Vector2
+	pub fn new(x: Real, y: Real) -> Vector2
 	{
 		Vector2 { x: x, y: y }
 	}
@@ -387,7 +417,7 @@ impl Vector2i
 
 impl Vector3
 {
-	pub fn new(x: f32, y: f32, z: f32) -> Vector3
+	pub fn new(x: Real, y: Real, z: Real) -> Vector3
 	{
 		Vector3 { x: x, y: y, z: z }
 	}
@@ -419,7 +449,7 @@ impl Rect2i
 
 impl Vector4
 {
-	pub fn new(x: f32, y: f32, z: f32, w: f32) -> Vector4
+	pub fn new(x: Real, y: Real, z: Real, w: Real) -> Vector4
 	{
 		Vector4 { x: x, y: y, z: z, w: w }
 	}

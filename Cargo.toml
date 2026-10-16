@@ -6,6 +6,13 @@ license = "Apache-2.0 OR MIT"
 description = "godot-sandbox (libriscv) Rust guest that drives the SolidCraft engine"
 repository = "https://github.com/V-Sekai-fire/interactor-solidcraft-guest"
 
+[features]
+# Lay Variants out for double-precision Godot (real_t = f64, 40-byte Variant).
+# The godot-sandbox hosts this guest runs under are double builds; build with
+# --no-default-features for a single-precision host.
+default = ["double"]
+double = []
+
 [dependencies]
 # The pure engine, checked out at the sibling `3-interactor/solidcraft` by the
 # goal manifest. Relative to this repo root (`3-interactor/solidcraft-guest`).

@@ -69,6 +69,14 @@ jobs:
           echo "LD=$(command -v ld.lld)" >> "$GITHUB_ENV"
           cargo build --release --target-dir "$RUNNER_TEMP/build"
           cp "$RUNNER_TEMP/build/riscv64gc-unknown-linux-gnu/release/solidcraft-guest" ./guest.elf
+      - name: The ELF declares a 40-byte (double-precision) Variant
+        working-directory: weft/3-interactor/solidcraft-guest
+        run: |
+          # godot-sandbox reads .sandbox_variant ("SBXV" + Variant size) and
+          # refuses a guest whose Variant does not match the host's real_t.
+          readelf -x .sandbox_variant guest.elf | tee /dev/stderr \
+            | grep -q '53425856 28000000' \
+            || { echo "FAIL guest.elf has no SBXV 40 note in .sandbox_variant"; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: solidcraft-guest-elf-${{ github.sha }}

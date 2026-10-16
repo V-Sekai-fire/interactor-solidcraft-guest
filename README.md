@@ -28,6 +28,14 @@ The guest registers three host-callable functions, declared in the form-A
 [ok, body_count, vertex_count, triangle_count, minx, miny, minz, maxx, maxy, maxz]
 ```
 
+## Precision
+
+The guest lays out its Variants for **double-precision** Godot by default
+(`real_t = f64`, a 40-byte Variant), and it says so in a `.sandbox_variant`
+section (`SBXV` + size) that godot-sandbox checks before it loads the ELF. A
+double host refuses a single-precision guest, and the other way round. For a
+single-precision host, build with `--no-default-features`.
+
 ## Build and run
 
 Build inside the goal-manifest workspace so the engine sibling and the RISC-V
