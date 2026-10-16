@@ -28,7 +28,7 @@ jobs:
 
   build:
     needs: commits
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -41,12 +41,27 @@ jobs:
       - name: The goal manifest's engine sibling + riscv64 sysroot
         working-directory: weft
         run: |
-          git clone -q --depth 1 https://github.com/bherbruck/solidcraft.git 3-interactor/solidcraft
+          # Pin the engine to the manifest revision so CI checks the same rev
+          # the goal manifest gates (bare main drifts onto upstream moves and
+          # breaks mid-refactor). Fast shallow fetch of the exact SHA.
+          ENGINE_REV=5c2fa3e9ca94d09c47a48256209c2939d0fcd39b
+          git init -q 3-interactor/solidcraft
+          git -C 3-interactor/solidcraft remote add origin https://github.com/bherbruck/solidcraft.git
+          git -C 3-interactor/solidcraft fetch --depth 1 origin $ENGINE_REV
+          git -C 3-interactor/solidcraft checkout -q FETCH_HEAD
           git clone -q --depth 1 https://github.com/V-Sekai-fire/repository-riscv64-sysroot.git 5-repository/riscv64-sysroot
       - name: Build the guest ELF from a clean runner
         working-directory: weft/3-interactor/solidcraft-guest
         env:
           RUSTC_SYSROOT: ""
+          # cc-rs picks up the C compiler from CC_<target> / TARGET_CC_<target>,
+          # hyphens or underscores. The bare name riscv64-linux-gnu-gcc is a
+          # non-executable stub on ubuntu-26.04; point every variant at the
+          # real apt toolchain.
+          CC_riscv64gc-unknown-linux-gnu: riscv64-linux-gnu-gcc-16
+          CC_riscv64gc_unknown_linux_gnu: riscv64-linux-gnu-gcc-16
+          TARGET_CC_riscv64gc-unknown-linux-gnu: riscv64-linux-gnu-gcc-16
+          TARGET_CC_riscv64gc_unknown_linux_gnu: riscv64-linux-gnu-gcc-16
         run: |
           export PATH="/root/.cargo/bin:${PATH}"
           rustup default stable
@@ -57,11 +72,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: solidcraft-guest-elf-${{ github.sha }}
-          path: guest.elf
+          path: weft/3-interactor/solidcraft-guest/guest.elf
+          if-no-files-found: error
 
   bintr:
     needs: [build, commits]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4

@@ -12,6 +12,21 @@ repository = "https://github.com/V-Sekai-fire/interactor-solidcraft-guest"
 solidcraft-engine = { path = "../solidcraft/crates/engine" }
 serde_json = "1"
 
+# The engine redirects crates.io truck deps to local vendor fixes via
+# [patch.crates-io] in its own Cargo.toml. When this repo is the workspace
+# root (as it is in the goal manifest build), those patches don't propagate
+# to a path dependency, so we restate them, pointing at the sibling engine's
+# vendor/ dir.
+[patch.crates-io]
+truck-shapeops = { path = "../solidcraft/vendor/truck-shapeops" }
+truck-stepio = { path = "../solidcraft/vendor/truck-stepio" }
+truck-meshalgo = { path = "../solidcraft/vendor/truck-meshalgo" }
+matext4cgmath = { path = "../solidcraft/vendor/matext4cgmath" }
+egui-wgpu = { path = "../solidcraft/vendor/egui-wgpu" }
+
+# Keep this repo out of any enclosing workspace.
+[workspace]
+
 # Local RISC-V guest build.
 [profile.release]
 debuginfo = "none"
