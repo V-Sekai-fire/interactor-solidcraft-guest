@@ -67,7 +67,7 @@ jobs:
           rustup default stable
           rustup target add riscv64gc-unknown-linux-gnu
           echo "LD=$(command -v ld.lld)" >> "$GITHUB_ENV"
-          cargo build --release --target-dir "$RUNNER_TEMP/build"
+          sh scripts/build.sh --target-dir "$RUNNER_TEMP/build"
           cp "$RUNNER_TEMP/build/riscv64gc-unknown-linux-gnu/release/solidcraft-guest" ./guest.elf
       - name: The ELF declares a 40-byte (double-precision) Variant
         working-directory: weft/3-interactor/solidcraft-guest
@@ -77,6 +77,18 @@ jobs:
           readelf -x .sandbox_variant guest.elf | tee /dev/stderr \
             | grep -q '53425856 28000000' \
             || { echo "FAIL guest.elf has no SBXV 40 note in .sandbox_variant"; exit 1; }
+      - name: The ELF names no build-machine path
+        working-directory: weft/3-interactor/solidcraft-guest
+        run: |
+          # scripts/build.sh maps the checkout's parent, the cargo registry and
+          # the toolchain to /src, /cargo and /rustup. Any of them left in the
+          # ELF would publish this runner's layout with every Space that ships it.
+          parent=$(cd .. && pwd)
+          for p in "$parent" "${CARGO_HOME:-$HOME/.cargo}/registry" "${RUSTUP_HOME:-$HOME/.rustup}"; do
+            n=$(strings -n 6 guest.elf | grep -cF "$p" || true)
+            echo "$p: $n"
+            [ "$n" = 0 ] || { echo "FAIL guest.elf names $p"; exit 1; }
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: solidcraft-guest-elf-${{ github.sha }}
