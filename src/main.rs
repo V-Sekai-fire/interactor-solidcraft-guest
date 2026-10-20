@@ -1,6 +1,7 @@
 mod godot;
-use godot::api::{register_public_api_func0, register_public_api_func3, register_public_api_func4};
+use godot::api::{register_public_api_func0, register_public_api_func1, register_public_api_func3, register_public_api_func4};
 use godot::array::GodotArray;
+use godot::string::GodotString;
 use godot::variant::{Variant, VariantType};
 use godot::sysalloc::fast_exit;
 
@@ -88,14 +89,19 @@ fn solid_mesh(kind: i64, a: f64, b: f64, c: f64) -> Variant {
         println!("{cmd} {params} failed: {e}");
     }
     let world = session.world_state();
-    let mut out: Vec<Variant> = Vec::with_capacity(5);
     if ran.is_err() || world.bodies.is_empty() {
-        out.push(Variant::new_bool(false));
-        return GodotArray::create(&out).to_variant();
+        return GodotArray::create(&[Variant::new_bool(false)]).to_variant();
     }
-    // A game-sized mesh: chord tolerance 1.5% of the body (the engine's display
-    // mesh uses 0.1%, ten times the triangles of a sphere for no visible gain).
-    let mb = &world.bodies[0];
+    let mut out: Vec<Variant> = vec![Variant::new_bool(true)];
+    out.extend(body_mesh(&world.bodies[0]));
+    GodotArray::create(&out).to_variant()
+}
+
+/// One body's mesh as [triangle_count, positions, normals, indices]: positions and normals are
+/// flat float Arrays (x, y, z per vertex, mm), indices a flat int Array (three per triangle,
+/// counter-clockwise outside). A game-sized mesh: chord tolerance 1.5% of the body (the
+/// engine's display mesh uses 0.1%, ten times the triangles of a sphere for no visible gain).
+fn body_mesh(mb: &solidcraft_engine::doc::ModelBody) -> Vec<Variant> {
     let mesh = match mb.body.tessellate((mb.body.size() * 0.015).max(0.05)) {
         Ok(m) => std::sync::Arc::new(m),
         Err(_) => mb.mesh(),
@@ -119,12 +125,43 @@ fn solid_mesh(kind: i64, a: f64, b: f64, c: f64) -> Variant {
             idx.push(Variant::new_integer(*i as i64));
         }
     }
-    out.push(Variant::new_bool(true));
-    out.push(Variant::new_integer(triangles.len() as i64));
-    out.push(GodotArray::create(&pos).to_variant());
-    out.push(GodotArray::create(&nrm).to_variant());
-    out.push(GodotArray::create(&idx).to_variant());
-    GodotArray::create(&out).to_variant()
+    vec![
+        Variant::new_integer(triangles.len() as i64),
+        GodotArray::create(&pos).to_variant(),
+        GodotArray::create(&nrm).to_variant(),
+        GodotArray::create(&idx).to_variant(),
+    ]
+}
+
+/// Run a SolidCraft command script, `{"commands": [{"command", "params"}, ...]}` (the format
+/// `solidcraft-cli run` takes), in a fresh session and return every body it leaves:
+///   [ok, message, bodies]   bodies = [[name, triangle_count, positions, normals, indices], ...]
+/// On failure ok is false and message names the failing step; bodies is then empty.
+extern "C"
+fn solid_script(script: GodotString) -> Variant {
+    let text = script.to_string();
+    let fail = |m: String| {
+        GodotArray::create(&[Variant::new_bool(false), Variant::new_string(&m), GodotArray::create(&[]).to_variant()])
+            .to_variant()
+    };
+    let parsed: JValue = match serde_json::from_str(&text) {
+        Ok(v) => v,
+        Err(e) => return fail(format!("script is not JSON: {e}")),
+    };
+    let mut session = Session::default();
+    if let Err(e) = session.run_script(&parsed) {
+        return fail(e.to_string());
+    }
+    let world = session.world_state();
+    let mut bodies: Vec<Variant> = Vec::with_capacity(world.bodies.len());
+    for mb in world.bodies.iter() {
+        let mut b = vec![Variant::new_string(&mb.name)];
+        b.extend(body_mesh(mb));
+        bodies.push(GodotArray::create(&b).to_variant());
+    }
+    let msg = format!("{} bodies", bodies.len());
+    GodotArray::create(&[Variant::new_bool(true), Variant::new_string(&msg), GodotArray::create(&bodies).to_variant()])
+        .to_variant()
 }
 
 /// How many command specs does the engine expose?
@@ -158,6 +195,12 @@ pub fn main() {
         solid_mesh,
         "Array",
         "int kind, float a, float b, float c",
+    );
+    register_public_api_func1(
+        "solid_script",
+        solid_script,
+        "Array",
+        "String script",
     );
     register_public_api_func0(
         "solid_command_count",
