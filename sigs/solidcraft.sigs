@@ -9,4 +9,5 @@
 SolidCraft.solid_default()                      -> Array    # 10x20x30 mm box, canonical example
 SolidCraft.solid_box(float length, float width, float height) -> Array    # parameterised box, mm
 SolidCraft.solid_mesh(int kind, float a, float b, float c) -> Array # [ok, tris, positions, normals, indices]
+SolidCraft.solid_script(String script)        -> Array    # [ok, message, [[name, tris, positions, normals, indices], ...]]
 SolidCraft.solid_command_count()                -> int      # engine command-spec count
